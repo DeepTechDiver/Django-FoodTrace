@@ -1,0 +1,271 @@
+pragma solidity ^0.4.24;
+contract Ownable {
+  address public owner;
+
+  event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+  function Ownable() public {
+    owner = msg.sender;
+  }
+
+  modifier onlyOwner() {
+    require(msg.sender == owner);
+    _;
+  }
+
+  function transferOwnership(address newOwner) public onlyOwner {
+    require(newOwner != address(0));
+    OwnershipTransferred(owner, newOwner);
+    owner = newOwner;
+  }
+
+}
+
+//功能业务  
+contract test is Ownable {
+    //储存设计
+    struct Feed {
+        uint id;
+        string feedName;
+        string feedtype;
+        uint now;
+    }
+    mapping(uint => Feed) feedMap;//订单编号
+    
+    struct Order {
+        uint orderNo;
+		string name;
+		string password;
+        uint phone;
+        uint Type;
+        string place;
+        string createUser;
+        uint now;
+    }
+    mapping(uint => Order) public orderMap;
+	
+    //生产商 
+    struct productions {
+        uint orderNo;
+        uint orderType;
+        string foodname;
+    	string company;
+    	string people;
+    	uint phone;
+    	uint now;
+		address user;
+	}
+	//收购商 
+	struct buys {
+    	uint orderNo;
+    	uint orderType;
+    	string customer;
+    	string people;
+    	uint phone;
+    	uint now;
+		address user;
+	}
+	//运输商 
+	struct transports{
+		uint orderNo;
+		uint orderType;
+    	uint car_num;
+        string form_place;
+        string to_place;
+        string people;
+        uint phone;
+        uint now;
+		address user;
+	}
+	//销售商
+	struct sales {
+        uint orderNo;
+        uint orderType;
+        string name;
+        uint weight;
+        uint price;
+        uint day;
+        string place;
+        string people;
+        uint phone;
+        uint now;
+        address user;
+    }
+    mapping(uint => productions) production;//生产商 
+    mapping(uint => buys) buy;//收购商 
+    mapping(uint => transports) transport;//运输商 
+    mapping(uint => sales) sale;//销售商 
+
+    mapping(address => uint) userRoleMap;
+    
+    uint[] ID;
+    
+    string feedName;
+    uint numOrder;
+
+    
+    constructor() public {
+        numOrder = 0;
+    }
+    
+    // 编号检查 true表示存在 ，反之
+    function checkid(uint id) public returns(bool) {
+        uint i = 0;
+        while(true){
+            i++;
+            if (ID[i-1] == id){
+                return true;
+                break;
+            }
+           }
+        return false;
+    }
+
+    function rand() public view returns(uint256) {
+        uint256 random = uint256(keccak256(block.difficulty,now));
+        return  random%100000;
+    }
+    
+    function getid() public view returns(uint[]){
+        return ID;
+    }
+
+    //创建食物
+    function createFeed(string name, string feedType) public returns(uint) {
+        uint id = rand();
+        ID.push(id);
+        feedMap[id] = Feed(id, name, feedType,now);
+        return id;
+    }
+	
+	//查看食物
+    function getFeed(uint id) public view returns(string,string, uint) {
+        Feed storage feed = feedMap[id];
+        return (feed.feedName, feed.feedtype, feed.now);
+    }
+    
+    
+    //创建角色
+    function setOrder(string name,string password,uint phone,uint Type,string place,string createUser) public returns(uint) {
+        numOrder++;
+        // string[] memory name = new string[](1);
+        // string[] memory password = new string[](1);
+        // name[0]= _name;
+        // password[0]= _password;
+        Order memory order = Order(numOrder,name,password,phone,Type,place,createUser,now);
+        // orderMap[numOrder] = Order(numOrder,name,password,phone,Type,place,createUser,now);
+        //return numOrder;
+        return numOrder;
+    }
+	//查看
+    function getOrder(uint orderNo) public view returns(string,string,uint, uint,string, string,uint) {
+        Order storage order = orderMap[orderNo];
+        return (order.name, order.password,order.phone,order.Type, order.place,order.createUser,order.now);
+    }
+    
+    
+    
+    // function changeOrder(string name,uint createTime,uint phone,uint Type,string place,string createUser) public returns(uint) {
+    //     orderMap[numOrder] = Order(numOrder,name,createTime,phone,Type,place,createUser);
+    //     return numOrder;
+
+    // }
+    
+    //更新 
+    // function updateOrder(uint orderNo,string name,uint createTime,uint phone,uint Type,string place,string createUser) public view returns(uint) {
+    //     Order storage order = orderMap[orderNo];
+    //     order.name = name;
+    //     order.createTime = createTime;
+    //     order.phone = phone;
+    //     orderMap[orderNo].Type = Type;
+    //     orderMap[orderNo].place = place;
+    //     orderMap[orderNo].createUser = createUser;
+    // }
+    
+    
+    //设置用户角色
+    function addRole(address userAddress, uint role) public onlyOwner {
+        userRoleMap[userAddress] = role;
+    }
+
+	//查看地址对应角色
+    function getUserRole(address userAddress) public view returns(uint) {
+        uint role = userRoleMap[userAddress];
+        return role;
+    }
+    
+    function changeRole(address userAddress, uint newrole) public onlyOwner {
+        userRoleMap[userAddress] = newrole;
+    }
+    
+    function moveRole(address userAddress)public onlyOwner {
+        delete userRoleMap[userAddress];
+    }
+    
+    
+    //生产者功能
+    function Produces(uint id,string foodname,string company,string people,uint phone) public returns(uint){
+        require(userRoleMap[msg.sender] == 1);
+        production[id] = productions(id,1,foodname, company, people, phone,now, msg.sender);
+        return id;
+    }
+        
+    function getProduce(uint id) public view returns(uint,uint,string,string,string,uint,uint, address) {
+        productions storage order = production[id];
+        return (order.orderNo,order.orderType,order.foodname, order.company, order.people, order.phone,order.now,order.user);
+    }
+    
+
+
+    
+    //购买者功能
+    function Buy(uint id,string customer,string people,uint phone ) public returns(uint) {
+        require(userRoleMap[msg.sender] == 2);
+        buy[id] = buys(id, 2, customer, people, phone, now,msg.sender);
+        return id;
+
+    }
+    
+    function getBuy(uint id)  public view returns(uint,uint,string,string,uint,uint,address) {
+        buys storage order = buy[id];
+        return (order.orderNo, order.orderType,order.customer, order.people, order.phone,order.now,order.user);
+    }
+    
+    
+    
+    //运输者功能 
+    function Transport(uint id,uint car_num,string form_place,string to_place,string people,uint phone ) public returns(uint) {
+        require(userRoleMap[msg.sender] == 3);
+        transport[id] = transports(id,3, car_num, form_place, to_place, people, phone,now, msg.sender );
+        return id;
+    }    
+    function getTransport(uint id)  public view returns(uint,uint, uint,string,string,string,uint,uint,address) {
+        transports storage order = transport[id];
+        return (order.orderNo,order.orderType, order.car_num, order.form_place, order.to_place, order.people, order.phone,order.now,order.user);
+    }
+
+    
+    
+    
+    //销售者功能
+    function Sale(uint id,string name,uint weight,uint price,uint day,string place,string people,uint phone ) public returns(uint) {
+        require(userRoleMap[msg.sender] == 4);
+        sale[id] = sales(id,4, name, weight, price, day, place, people, phone,now, msg.sender );
+        return id;
+
+    }
+        
+    function getSale(uint id)  public view returns(uint,uint,string,uint, uint,uint,string,string,uint,uint,address) {
+        sales storage order = sale[id];
+        return (order.orderNo,order.orderType, order.name, order.weight, order.price, order.day, order.place, order.people,order.phone,order.now,order.user);
+    }
+    
+    
+    function feedtrace(uint orderNo) public view{
+        getProduce(orderNo);
+        getBuy(orderNo);
+        getTransport(orderNo);
+        getSale(orderNo);
+    }
+
+}
